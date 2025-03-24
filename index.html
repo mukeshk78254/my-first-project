@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UPSC Quiz App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #74ebd5, #acb6e5);
+      font-family: 'Arial', sans-serif;
+    }
+    .container {
+      max-width: 450px;
+      margin: 50px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    h1, h2 {
+      text-align: center;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    .btn {
+      background: #1abc9c;
+      color: white;
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #16a085;
+    }
+    .question {
+      font-weight: bold;
+      margin-top: 15px;
+      font-size: 18px;
+      color: #2c3e50;
+    }
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .options label {
+      display: block;
+      background: #ecf0f1;
+      padding: 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .options input {
+      margin-right: 10px;
+    }
+    .watermark {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      color: rgba(0, 0, 0, 0.2);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login Page -->
+<div id="loginPage" class="container">
+  <h1>Welcome to UPSC Quiz</h1>
+  <h2>Login</h2>
+  <input type="text" id="loginUser" placeholder="Username" class="w-full p-2 border rounded">
+  <input type="password" id="loginPass" placeholder="Password" class="w-full p-2 border rounded mt-2">
+  <button class="btn" onclick="login()">Login</button>
+  <p class="text-center mt-3">New User? <a href="javascript:void(0);" onclick="toggleForms()">Register</a></p>
+</div>
+
+<!-- Registration Page -->
+<div id="registerPage" class="container hidden">
+  <h2>Register</h2>
+  <input type="text" id="regUser" placeholder="Username" class="w-full p-2 border rounded">
+  <input type="password" id="regPass" placeholder="Password" class="w-full p-2 border rounded mt-2">
+  <button class="btn" onclick="register()">Sign Up</button>
+  <p class="text-center mt-3">Already have an account? <a href="javascript:void(0);" onclick="toggleForms()">Login</a></p>
+</div>
+
+<!-- Quiz Page -->
+<div id="quizPage" class="container hidden">
+  <h2>UPSC Quiz</h2>
+  <div id="quizContainer"></div>
+  <button class="btn" id="nextBtn" onclick="nextQuestion()">Next</button>
+  <button class="btn hidden" id="submitBtn" onclick="submitQuiz()">Submit</button>
+</div>
+
+<!-- Leaderboard Page -->
+<div id="leaderboardPage" class="container hidden">
+  <h2>Leaderboard</h2>
+  <table class="w-full border-collapse border border-gray-400">
+    <thead>
+      <tr>
+        <th class="border p-2">Rank</th>
+        <th class="border p-2">Username</th>
+        <th class="border p-2">Score</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboardBody"></tbody>
+  </table>
+  <button class="btn" onclick="restartQuiz()">Restart</button>
+</div>
+
+<p class="watermark">© UPSC Quiz 2025</p>
+
+<script>
+  let currentUser = null;
+  let users = JSON.parse(localStorage.getItem("users")) || [];
+  let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+  
+  let questions = [
+    { q: "What is the 73rd Constitutional Amendment about?", o: ["Decentralization", "Local Courts", "Nationalization", "Judiciary"], a: "Decentralization" },
+    { q: "Who was India’s first woman PM?", o: ["Indira Gandhi", "Sarojini Naidu", "Patil", "Amrit Kaur"], a: "Indira Gandhi" },
+    { q: "Green Revolution is related to?", o: ["Agriculture", "Industries", "Urbanization", "Deforestation"], a: "Agriculture" },
+    { q: "Which article provides Single Citizenship?", o: ["Article 1", "Article 19", "Article 370", "Article 51A"], a: "Article 1" },
+    { q: "India's longest river?", o: ["Ganges", "Yamuna", "Brahmaputra", "Godavari"], a: "Ganges" },
+    { q: "State with highest tea production?", o: ["Assam", "West Bengal", "Kerala", "Tamil Nadu"], a: "Assam" },
+    { q: "GDP stands for?", o: ["Gross Domestic Product", "Global Product", "Growth Data", "Government Dev."], a: "Gross Domestic Product" },
+    { q: "Who wrote 'Discovery of India'?", o: ["Nehru", "Gandhi", "Patel", "Tagore"], a: "Nehru" },
+    { q: "Oldest Civilization?", o: ["Mesopotamian", "Indus Valley", "Egyptian", "Chinese"], a: "Mesopotamian" },
+    { q: "Capital of India?", o: ["New Delhi", "Mumbai", "Kolkata", "Chennai"], a: "New Delhi" }
+  ];
+  
+  let quizQuestions = [];
+  let currentQuestionIndex = 0;
+  let score = 0;
+  
+  function toggleForms() {
+    document.getElementById("loginPage").classList.toggle("hidden");
+    document.getElementById("registerPage").classList.toggle("hidden");
+  }
+  
+  function register() {
+    let username = document.getElementById("regUser").value;
+    let password = document.getElementById("regPass").value;
+
+    if (!username || !password) {
+      alert("Please fill all fields.");
+      return;
+    }
+
+    // Check if username already exists
+    if (users.find(u => u.username === username)) {
+      alert("Username already exists!");
+      return;
+    }
+
+    // Add new user
+    users.push({ username, password });
+    localStorage.setItem("users", JSON.stringify(users));
+    alert("Registration successful! Please log in.");
+    toggleForms();
+  }
+  
+  function login() {
+    let username = document.getElementById("loginUser").value;
+    let password = document.getElementById("loginPass").value;
+    
+    if (!username || !password) {
+      alert("Please enter both username and password.");
+      return;
+    }
+    
+    let user = users.find(u => u.username === username && u.password === password);
+    if (user) {
+      currentUser = user;
+      document.getElementById("loginPage").classList.add("hidden");
+      document.getElementById("quizPage").classList.remove("hidden");
+      startQuiz();
+    } else {
+      alert("Invalid Credentials!");
+    }
+  }
+  
+  function startQuiz() {
+    // Randomize and select 10 questions
+    quizQuestions = [...questions].sort(() => 0.5 - Math.random()).slice(0, 10);
+    currentQuestionIndex = 0;
+    score = 0;
+    loadQuestion();
+    document.getElementById("nextBtn").classList.remove("hidden");
+    document.getElementById("submitBtn").classList.add("hidden");
+  }
+  
+  function loadQuestion() {
+    let quizContainer = document.getElementById("quizContainer");
+    quizContainer.innerHTML = "";
+    let q = quizQuestions[currentQuestionIndex];
+    // Display question in bold and all options in one block
+    quizContainer.innerHTML = `<p class="question">${q.q}</p>
+      <div class="options">
+        ${q.o.map(o =>`<label><input type="radio" name="option" value="${o}"> ${o}</label>`).join('')}`;
+    
+    // Add event listeners to highlight option when clicked
+    document.querySelectorAll(".options label").forEach(label => {
+      label.addEventListener("click", function(){
+        document.querySelectorAll(".options label").forEach(l => l.classList.remove("bg-blue-300"));
+        this.classList.add("bg-blue-300");
+      });
+    });
+  }
+  
+  function nextQuestion() {
+    let selected = document.querySelector(`input[name="option"]:checked`);
+    if (!selected) {
+      alert("Please select an option!");
+      return;
+    }
+    if (selected.value === quizQuestions[currentQuestionIndex].a) {
+      score++;
+    }
+    if (currentQuestionIndex < quizQuestions.length - 1) {
+      currentQuestionIndex++;
+      loadQuestion();
+    } else {
+      document.getElementById("nextBtn").classList.add("hidden");
+      document.getElementById("submitBtn").classList.remove("hidden");
+    }
+  }
+  
+  function submitQuiz() {
+    leaderboard.push({ username: currentUser.username, score });
+    leaderboard.sort((a, b) => b.score - a.score);
+    localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+    document.getElementById("quizPage").classList.add("hidden");
+    document.getElementById("leaderboardPage").classList.remove("hidden");
+    updateLeaderboard();
+  }
+  
+  function updateLeaderboard() {
+    let tbody = document.getElementById("leaderboardBody");
+    tbody.innerHTML = leaderboard.map((e, i) => 
+      `<tr><td>${i + 1}</td><td>${e.username}</td><td>${e.score}</td></tr>`
+    ).join('');
+  }
+  
+  function restartQuiz() {
+    document.getElementById("leaderboardPage").classList.add("hidden");
+    document.getElementById("quizPage").classList.remove("hidden");
+    startQuiz();
+  }
+</script>
+
+</body>
+</html>
